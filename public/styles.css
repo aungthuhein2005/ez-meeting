@@ -1,0 +1,288 @@
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  line-height: 1.45;
+  color: #e8eaed;
+  background: #0f1115;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.topbar {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #2a2f3a;
+  background: #141820;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.tagline {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #9aa0a6;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.panel {
+  background: #1a1f28;
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.hint,
+.muted {
+  color: #9aa0a6;
+  font-size: 0.92rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+input[type="email"],
+input[type="text"] {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #3d4450;
+  background: #0f1115;
+  color: #e8eaed;
+}
+
+button {
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+button.secondary {
+  background: #3d4450;
+}
+
+button.danger {
+  background: #b91c1c;
+}
+
+button.small {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.linkish {
+  background: transparent;
+  color: #93c5fd;
+  padding-left: 0;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #fca5a5;
+  margin: 0.5rem 0 0;
+  min-height: 1.25rem;
+}
+
+.actions {
+  margin-bottom: 1rem;
+}
+
+.join-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.join-row label {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+.meeting-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.meeting-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge {
+  font-family: ui-monospace, monospace;
+  background: #252b36;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.meeting-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.meeting-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .meeting-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.video-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4/3;
+}
+
+.video-wrap .label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 0.75rem;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+#local-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remote-videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.remote-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4/3;
+}
+
+.remote-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remote-wrap .label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 0.75rem;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+.qr-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .qr-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+#qr-img {
+  display: block;
+  border-radius: 8px;
+  border: 1px solid #2a2f3a;
+}
+
+.chat h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.chat-log {
+  border: 1px solid #2a2f3a;
+  border-radius: 8px;
+  min-height: 140px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.88rem;
+  background: #0f1115;
+}
+
+.chat-log div {
+  margin-bottom: 0.35rem;
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.chat-form input {
+  flex: 1;
+}
+
+.status {
+  margin-top: 0.75rem;
+  color: #fbbf24;
+  min-height: 1.25rem;
+}

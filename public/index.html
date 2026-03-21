@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ez meeting</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Ez meeting</h1>
+      <p class="tagline">Video, voice, and chat — small groups (mesh WebRTC)</p>
+    </header>
+
+    <main>
+      <section id="view-login" class="panel hidden">
+        <h2>Sign in</h2>
+        <p class="hint">Email and display name only — no password (see Scope.md).</p>
+        <form id="form-login">
+          <label>
+            Email
+            <input id="login-email" type="email" required autocomplete="email" maxlength="320" />
+          </label>
+          <label>
+            Display name
+            <input id="login-name" type="text" required autocomplete="name" maxlength="80" />
+          </label>
+          <button type="submit">Continue</button>
+          <p id="login-error" class="error" role="alert"></p>
+        </form>
+      </section>
+
+      <section id="view-lobby" class="panel hidden">
+        <h2>Lobby</h2>
+        <p id="lobby-user" class="muted"></p>
+        <div class="actions">
+          <button type="button" id="btn-host">Host a meeting</button>
+        </div>
+        <form id="form-join" class="join-row">
+          <label>
+            Join with code
+            <input id="join-code" type="text" maxlength="12" placeholder="e.g. ABC123" autocomplete="off" />
+          </label>
+          <button type="submit">Join</button>
+        </form>
+        <p id="lobby-error" class="error" role="alert"></p>
+        <button type="button" id="btn-logout" class="linkish">Use different email</button>
+      </section>
+
+      <section id="view-meeting" class="panel hidden">
+        <div class="meeting-bar">
+          <div class="meeting-meta">
+            <span class="badge" id="meeting-code-label"></span>
+            <button type="button" id="btn-copy-link" class="small">Copy join link</button>
+          </div>
+          <div class="meeting-actions">
+            <button type="button" id="btn-leave" class="secondary">Leave</button>
+            <button type="button" id="btn-end" class="danger hidden">End for everyone</button>
+          </div>
+        </div>
+        <div class="meeting-grid">
+          <div class="video-wrap">
+            <video id="local-video" playsinline autoplay muted></video>
+            <span class="label">You</span>
+          </div>
+          <div id="remote-videos" class="remote-videos"></div>
+        </div>
+        <div class="qr-row">
+          <div>
+            <p class="muted small">Share QR (join URL is invalidated when the meeting ends)</p>
+            <img id="qr-img" alt="Meeting QR code" width="192" height="192" />
+          </div>
+          <aside class="chat">
+            <h3>Chat</h3>
+            <div id="chat-log" class="chat-log" aria-live="polite"></div>
+            <form id="form-chat" class="chat-form">
+              <input id="chat-input" type="text" maxlength="2000" placeholder="Message…" autocomplete="off" />
+              <button type="submit">Send</button>
+            </form>
+          </aside>
+        </div>
+        <p id="meeting-status" class="status" role="status"></p>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/vendor/simplepeer.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "ez-meeting",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Video meeting MVP — Express + Socket.io (see Scope.md)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.4",
+    "simple-peer": "^9.11.1",
+    "socket.io": "^4.8.1"
+  }
+}
