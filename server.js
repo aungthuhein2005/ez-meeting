@@ -26,6 +26,10 @@ app.use((req, res, next) => {
 });
 
 app.use("/vendor", express.static(path.join(__dirname, "node_modules/simple-peer")));
+app.get("/vendor/fingerpose.js", (_req, res) => {
+  res.type("application/javascript");
+  res.sendFile(path.join(__dirname, "node_modules/fingerpose/dist/fingerpose.js"));
+});
 
 function joinUrlFromSocket(socket, code) {
   const host = socket.handshake.headers?.host || `localhost:${PORT}`;
@@ -178,6 +182,43 @@ io.on("connection", (socket) => {
     if (!text.trim()) return;
     io.to(code).emit("chat:message", {
       text,
+      at: Date.now(),
+      from: socket.user.name,
+      socketId: socket.id,
+    });
+  });
+
+  const SIGN_KINDS = new Set(["gesture", "spell", "model"]);
+
+  /** Hand-sign captions (pretrained MediaPipe + fingerpose on client). Rate-limited per socket. */
+  socket.on("sign:caption", (payload) => {
+    const code = socket.data.roomCode;
+    if (!code) return;
+    const now = Date.now();
+    if (!socket.data.signCaptionLog) socket.data.signCaptionLog = [];
+    socket.data.signCaptionLog = socket.data.signCaptionLog.filter((t) => now - t < 1000);
+    if (socket.data.signCaptionLog.length >= 12) return;
+    socket.data.signCaptionLog.push(now);
+
+    const text = typeof payload?.text === "string" ? payload.text.slice(0, 500) : "";
+    if (!text.trim()) return;
+    const gestureKey =
+      typeof payload?.gestureKey === "string" ? payload.gestureKey.slice(0, 64) : "";
+    let kind = typeof payload?.kind === "string" ? payload.kind.trim().toLowerCase() : "gesture";
+    if (!SIGN_KINDS.has(kind)) kind = "gesture";
+    const lang =
+      typeof payload?.lang === "string" ? payload.lang.trim().slice(0, 16) : "";
+    const translatedText =
+      typeof payload?.translatedText === "string"
+        ? payload.translatedText.trim().slice(0, 500)
+        : "";
+
+    io.to(code).emit("sign:caption", {
+      text: text.trim(),
+      gestureKey,
+      kind,
+      lang: lang || undefined,
+      translatedText: translatedText || undefined,
       at: Date.now(),
       from: socket.user.name,
       socketId: socket.id,

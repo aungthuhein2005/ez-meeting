@@ -6,16 +6,21 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build:handsigns": "esbuild scripts/handsigns-entry.js --bundle --format=iife --global-name=HandSignAlphabetKit --outfile=public/vendor/handsigns-alphabet.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "express": "^4.21.2",
+    "fingerpose": "^0.1.0",
     "jsonwebtoken": "^9.0.2",
     "qrcode": "^1.5.4",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.4"
   }
 }

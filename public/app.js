@@ -7,6 +7,12 @@
   let meetingState = { joinUrl: "", code: "", isHost: false };
   let busy = false;
 
+  let lastLocalSignLine = "";
+  let localSpellDraft = "";
+  const ttsPending = [];
+
+  const MAX_TTS_QUEUED = 3;
+
   const SimplePeerCtor = window.SimplePeer;
   if (typeof SimplePeerCtor !== "function") {
     console.error("SimplePeer not loaded");
@@ -40,6 +46,69 @@
     if (el) el.textContent = msg || "";
   }
 
+  function renderLocalSignSubtitle() {
+    const el = $("local-sign-subtitle");
+    if (!el) return;
+    if (!lastLocalSignLine && !localSpellDraft) {
+      el.textContent = "";
+      return;
+    }
+    el.textContent = "";
+    if (lastLocalSignLine) {
+      el.appendChild(document.createTextNode(lastLocalSignLine));
+    }
+    if (localSpellDraft) {
+      const span = document.createElement("span");
+      span.className = "sign-draft";
+      span.textContent = "Spelling: " + localSpellDraft;
+      el.appendChild(span);
+    }
+  }
+
+  function setRemoteSignSubtitle(peerId, data) {
+    const wrap = document.getElementById("remote-" + peerId);
+    if (!wrap) return;
+    const sub = wrap.querySelector(".remote-sign-subtitle");
+    if (!sub) return;
+    let line = data.text || "";
+    if (data.translatedText) line += " · " + data.translatedText;
+    const kind = data.kind && data.kind !== "gesture" ? " [" + data.kind + "]" : "";
+    sub.textContent = line ? line + kind : "";
+  }
+
+  function flushTtsQueue() {
+    if (!window.speechSynthesis) return;
+    const chk = $("sign-tts-enable");
+    if (!chk || !chk.checked) {
+      try {
+        speechSynthesis.cancel();
+      } catch (_) {}
+      ttsPending.length = 0;
+      return;
+    }
+    if (document.hidden) return;
+    if (speechSynthesis.speaking || speechSynthesis.pending) return;
+    const next = ttsPending.shift();
+    if (!next) return;
+    const u = new SpeechSynthesisUtterance(next.text);
+    u.lang = next.lang || "en-US";
+    u.onend = () => flushTtsQueue();
+    u.onerror = () => flushTtsQueue();
+    speechSynthesis.speak(u);
+  }
+
+  function enqueueSignTts(text, lang) {
+    const chk = $("sign-tts-enable");
+    if (!chk || !chk.checked || !text) return;
+    if (ttsPending.length >= MAX_TTS_QUEUED) ttsPending.shift();
+    ttsPending.push({ text, lang: lang || "en-US" });
+    flushTtsQueue();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) flushTtsQueue();
+  });
+
   function clearLobbyError() {
     $("lobby-error").textContent = "";
   }
@@ -48,9 +117,9 @@
     $("login-error").textContent = "";
   }
 
-  function onConnectError(err) {
+  async function onConnectError(err) {
     console.error(err);
-    cleanupMeeting();
+    await cleanupMeeting();
     const msg = String(err && err.message ? err.message : err);
     if (/invalid|auth|token/i.test(msg)) {
       clearToken();
@@ -92,14 +161,51 @@
       log.scrollTop = log.scrollHeight;
     });
 
-    socket.on("room:ended", ({ reason }) => {
+    socket.on("sign:caption", (data) => {
+      const isSelf = socket && data.socketId === socket.id;
+      if (isSelf) {
+        lastLocalSignLine = data.text || "";
+        renderLocalSignSubtitle();
+      } else if (data.socketId) {
+        setRemoteSignSubtitle(data.socketId, data);
+      }
+
+      const signLog = $("sign-log");
+      if (signLog) {
+        const line = document.createElement("div");
+        line.className = "sign-line";
+        const t = new Date(data.at).toLocaleTimeString();
+        let body = `${data.from}: ${data.text}`;
+        if (data.translatedText) body += ` → ${data.translatedText}`;
+        if (data.kind && data.kind !== "gesture") body += ` (${data.kind})`;
+        line.textContent = `[${t}] ${body}`;
+        signLog.appendChild(line);
+        signLog.scrollTop = signLog.scrollHeight;
+      }
+      const chat = $("chat-log");
+      if (chat) {
+        const c = document.createElement("div");
+        c.className = "sign-chat-echo";
+        const t = new Date(data.at).toLocaleTimeString();
+        c.textContent = `[Sign] [${t}] ${data.from}: ${data.text}`;
+        chat.appendChild(c);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      if (!isSelf) {
+        enqueueSignTts(data.text, data.lang);
+      }
+      flushTtsQueue();
+    });
+
+    socket.on("room:ended", async ({ reason }) => {
       const labels = {
         host_ended: "Meeting ended by host.",
         host_left: "Host left — meeting closed.",
         empty: "Everyone left — meeting closed.",
       };
       meetingStatus(labels[reason] || "Meeting ended.");
-      cleanupMeeting();
+      await cleanupMeeting();
       showView("lobby");
       refreshLobbyUser();
     });
@@ -121,6 +227,18 @@
     $("btn-end").classList.toggle("hidden", !ack.isHost);
     meetingStatus("");
     $("chat-log").innerHTML = "";
+    const sl = $("sign-log");
+    if (sl) sl.innerHTML = "";
+    const hs = $("hand-sign-enable");
+    if (hs) hs.checked = false;
+    const sp = $("hand-sign-spell");
+    if (sp) sp.checked = false;
+    lastLocalSignLine = "";
+    localSpellDraft = "";
+    renderLocalSignSubtitle();
+    document.querySelectorAll(".remote-sign-subtitle").forEach((n) => {
+      n.textContent = "";
+    });
   }
 
   function addPeer(peerId, remoteName) {
@@ -151,10 +269,14 @@
         vid.playsInline = true;
         vid.autoplay = true;
         vid.srcObject = remoteStream;
+        const sub = document.createElement("div");
+        sub.className = "video-subtitle remote-sign-subtitle";
+        sub.setAttribute("aria-live", "polite");
         const lab = document.createElement("span");
         lab.className = "label";
         lab.textContent = remoteName || "Guest";
         wrap.appendChild(vid);
+        wrap.appendChild(sub);
         wrap.appendChild(lab);
         $("remote-videos").appendChild(wrap);
       }
@@ -178,7 +300,30 @@
     if (wrap) wrap.remove();
   }
 
-  function cleanupMeeting() {
+  async function stopHandSignCaptions() {
+    if (window.HandSignCaptions && window.HandSignCaptions.isRunning()) {
+      try {
+        await window.HandSignCaptions.stop();
+      } catch (_) {}
+    }
+    const hs = $("hand-sign-enable");
+    if (hs) hs.checked = false;
+    localSpellDraft = "";
+    renderLocalSignSubtitle();
+  }
+
+  async function cleanupMeeting() {
+    await stopHandSignCaptions();
+    ttsPending.length = 0;
+    if (window.speechSynthesis) {
+      try {
+        speechSynthesis.cancel();
+      } catch (_) {}
+    }
+    lastLocalSignLine = "";
+    localSpellDraft = "";
+    const locSub = $("local-sign-subtitle");
+    if (locSub) locSub.textContent = "";
     peers.forEach((p) => {
       try {
         p.destroy();
@@ -232,10 +377,10 @@
     registerSocketHandlers();
 
     const runCreate = () => {
-      socket.emit("room:create", (ack) => {
+      socket.emit("room:create", async (ack) => {
         if (!ack || ack.error) {
           meetingStatus("Could not create room: " + (ack && ack.error ? ack.error : "unknown"));
-          cleanupMeeting();
+          await cleanupMeeting();
           showView("lobby");
           return;
         }
@@ -287,14 +432,14 @@
     registerSocketHandlers();
 
     const runJoin = () => {
-      socket.emit("room:join", { code }, (ack) => {
+      socket.emit("room:join", { code }, async (ack) => {
         if (!ack || ack.error) {
           meetingStatus(
             ack && ack.error === "not_found"
               ? "Meeting not found or already ended."
               : "Could not join: " + (ack && ack.error ? ack.error : "unknown")
           );
-          cleanupMeeting();
+          await cleanupMeeting();
           showView("lobby");
           return;
         }
@@ -312,11 +457,11 @@
     else socket.once("connect", runJoin);
   }
 
-  function leaveMeeting() {
+  async function leaveMeeting() {
     if (socket && socket.connected) {
       socket.emit("room:leave");
     }
-    cleanupMeeting();
+    await cleanupMeeting();
     showView("lobby");
     refreshLobbyUser();
   }
@@ -410,9 +555,9 @@
     } catch (_) {}
   }
 
-  function logout() {
+  async function logout() {
     clearToken();
-    cleanupMeeting();
+    await cleanupMeeting();
     showView("login");
   }
 
@@ -453,6 +598,128 @@
     socket.emit("chat:message", { text });
     input.value = "";
   });
+
+  async function syncHandSignFromCheckbox() {
+    const el = $("hand-sign-enable");
+    const video = $("local-video");
+    if (!el || !video) return;
+    const want = el.checked;
+    if (want) {
+      if (!window.HandSignCaptions) {
+        meetingStatus("Hand-sign script not loaded.");
+        el.checked = false;
+        return;
+      }
+      if (!window.HandSignAlphabetKit) {
+        meetingStatus("Missing vendor/handsigns-alphabet.js — run: npm run build:handsigns");
+        el.checked = false;
+        return;
+      }
+      try {
+        meetingStatus("Loading hand models…");
+        await window.HandSignCaptions.start(
+          video,
+          (payload) => {
+            if (socket && socket.connected) {
+              socket.emit("sign:caption", {
+                text: payload.text,
+                gestureKey: payload.gestureKey,
+                kind: payload.kind || "gesture",
+                lang: payload.lang,
+                translatedText: payload.translatedText,
+              });
+            }
+            if (payload.kind !== "spell" || payload.text) {
+              lastLocalSignLine = payload.text || "";
+              renderLocalSignSubtitle();
+            }
+          },
+          {
+            getSpellMode: () => {
+              const el = $("hand-sign-spell");
+              return !!(el && el.checked);
+            },
+            onSpellPreview: (state) => {
+              localSpellDraft = state && state.buffer ? state.buffer : "";
+              renderLocalSignSubtitle();
+            },
+          }
+        );
+        meetingStatus("");
+      } catch (e) {
+        console.error(e);
+        meetingStatus("Hand recognition failed: " + (e && e.message ? e.message : e));
+        el.checked = false;
+      }
+    } else if (window.HandSignCaptions) {
+      try {
+        await window.HandSignCaptions.stop();
+      } catch (_) {}
+    }
+  }
+
+  const handSignCb = $("hand-sign-enable");
+  if (handSignCb) {
+    handSignCb.addEventListener("change", () => {
+      void syncHandSignFromCheckbox();
+    });
+  }
+
+  const spellCb = $("hand-sign-spell");
+  if (spellCb) {
+    spellCb.addEventListener("change", () => {
+      if (window.HandSignCaptions && window.HandSignCaptions.isRunning()) {
+        if (!spellCb.checked) window.HandSignCaptions.clearSpellBuffer();
+      }
+    });
+  }
+
+  function spellButtonsNeedHandSign() {
+    meetingStatus(
+      "Turn on “Hand-sign captions” first — then enable Finger-spelling to type letters."
+    );
+    setTimeout(() => meetingStatus(""), 5000);
+  }
+
+  const btnSpellCommit = $("btn-spell-commit");
+  if (btnSpellCommit) {
+    btnSpellCommit.addEventListener("click", () => {
+      if (!window.HandSignCaptions || !window.HandSignCaptions.isRunning()) {
+        spellButtonsNeedHandSign();
+        return;
+      }
+      const spellOn = $("hand-sign-spell") && $("hand-sign-spell").checked;
+      const before = window.HandSignCaptions.getSpellBuffer
+        ? String(window.HandSignCaptions.getSpellBuffer() || "").trim()
+        : "";
+      window.HandSignCaptions.commitSpell();
+      if (!before) {
+        meetingStatus(
+          spellOn
+            ? "Nothing to send yet — hold each letter steady until it appears under “Spelling: …”, then tap Send."
+            : "Turn on Finger-spelling mode, then sign letters (A–Z) so they fill the spelling line."
+        );
+        setTimeout(() => meetingStatus(""), 5500);
+      } else {
+        meetingStatus("");
+      }
+    });
+  }
+
+  const btnSpellClear = $("btn-spell-clear");
+  if (btnSpellClear) {
+    btnSpellClear.addEventListener("click", () => {
+      if (!window.HandSignCaptions || !window.HandSignCaptions.isRunning()) {
+        spellButtonsNeedHandSign();
+        return;
+      }
+      window.HandSignCaptions.clearSpellBuffer();
+      localSpellDraft = "";
+      renderLocalSignSubtitle();
+      meetingStatus("Spelling buffer cleared.");
+      setTimeout(() => meetingStatus(""), 2000);
+    });
+  }
 
   function boot() {
     const token = getToken();

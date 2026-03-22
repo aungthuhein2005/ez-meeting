@@ -9,7 +9,7 @@
   <body>
     <header class="topbar">
       <h1>Ez meeting</h1>
-      <p class="tagline">Video, voice, and chat — small groups (mesh WebRTC)</p>
+      <p class="tagline">Video, voice, chat, and optional hand-sign captions (mesh WebRTC)</p>
     </header>
 
     <main>
@@ -58,12 +58,39 @@
             <button type="button" id="btn-end" class="danger hidden">End for everyone</button>
           </div>
         </div>
+        <div class="hand-sign-bar">
+          <label class="hand-sign-toggle">
+            <input type="checkbox" id="hand-sign-enable" />
+            Hand-sign captions (camera analyzes your hands — pretrained models, no training)
+          </label>
+          <label class="hand-sign-toggle">
+            <input type="checkbox" id="hand-sign-spell" />
+            Finger-spelling mode (A–Z + open palm = space, hold fist ~⅓s to send line)
+          </label>
+          <label class="hand-sign-toggle">
+            <input type="checkbox" id="sign-tts-enable" />
+            Read others’ sign captions aloud (browser TTS)
+          </label>
+          <div class="spell-actions">
+            <button type="button" id="btn-spell-commit" class="small secondary">Send spelling line</button>
+            <button type="button" id="btn-spell-clear" class="small secondary">Clear spelling</button>
+          </div>
+          <p class="muted small hand-sign-hint">
+            Gesture mode: MediaPipe gestures + fingerpose (victory / thumbs). Spell mode: syauqy ASL letters (geometry-based, noisy).
+            Hold steady ~½s per gesture or letter.
+          </p>
+        </div>
         <div class="meeting-grid">
           <div class="video-wrap">
             <video id="local-video" playsinline autoplay muted></video>
+            <div id="local-sign-subtitle" class="video-subtitle" aria-live="polite"></div>
             <span class="label">You</span>
           </div>
           <div id="remote-videos" class="remote-videos"></div>
+        </div>
+        <div class="sign-panel">
+          <h3>Hand-sign feed</h3>
+          <div id="sign-log" class="sign-log" aria-live="polite"></div>
         </div>
         <div class="qr-row">
           <div>
@@ -85,6 +112,9 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/vendor/simplepeer.min.js"></script>
+    <script src="/vendor/handsigns-alphabet.js"></script>
+    <script src="/sign-labels.js"></script>
+    <script src="/hand-sign.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
