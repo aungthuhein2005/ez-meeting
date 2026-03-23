@@ -131,6 +131,9 @@ export function createDocumentsRouter(io) {
           fileName,
           mime,
           maxExtractChars: MAX_EXTRACT,
+        }).catch((err) => {
+          console.error("[doc pipeline]", err);
+          io.to(code).emit("doc:error", { docId, fileName, message: String(err && err.message ? err.message : err) });
         });
       });
     }

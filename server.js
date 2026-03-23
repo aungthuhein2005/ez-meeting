@@ -1,8 +1,14 @@
 import "dotenv/config";
+import fs from "fs";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
+
+/* Prevent unhandled rejections from crashing the process */
+process.on("unhandledRejection", (err) => {
+  console.error("[unhandledRejection]", err);
+});
 import QRCode from "qrcode";
 import { Server } from "socket.io";
 import { toNodeHandler } from "better-auth/node";
@@ -16,20 +22,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
+
+/* Ensure uploads directory exists at startup */
+const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
+fs.mkdirSync(uploadDir, { recursive: true });
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: true, credentials: true },
 });
 
-/* ── better-auth handler — MUST be before express.json() ── */
-app.all("/api/auth/*", toNodeHandler(auth));
-
-app.use("/api", createDocumentsRouter(io));
-
-app.use(express.json({ limit: "32kb" }));
-
-/** CORS for API calls */
+/** CORS for API calls — must be before all API routes */
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api")) return next();
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
@@ -39,6 +43,13 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
+
+/* ── better-auth handler — MUST be before express.json() ── */
+app.all("/api/auth/*", toNodeHandler(auth));
+
+app.use("/api", createDocumentsRouter(io));
+
+app.use(express.json({ limit: "32kb" }));
 
 app.use("/vendor", express.static(path.join(__dirname, "node_modules/simple-peer")));
 app.get("/vendor/fingerpose.js", (_req, res) => {
@@ -195,7 +206,7 @@ io.on("connection", (socket) => {
       name: socket.user.name,
     });
 
-    void meetingDoc.emitPayloadForOneSocket(io, socket, codeRaw);
+    meetingDoc.emitPayloadForOneSocket(io, socket, codeRaw).catch((err) => console.error("[doc emit]", err));
   });
 
   socket.on("signal", (payload) => {
@@ -232,7 +243,7 @@ io.on("connection", (socket) => {
         ? payload.preferredLanguage.trim().slice(0, 12)
         : "";
     socket.data.preferredLanguage = raw || "en";
-    void meetingDoc.emitPayloadForOneSocket(io, socket, code);
+    meetingDoc.emitPayloadForOneSocket(io, socket, code).catch((err) => console.error("[doc emit]", err));
   });
 
   socket.on("sign:caption", (payload) => {
