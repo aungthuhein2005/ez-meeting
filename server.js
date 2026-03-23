@@ -1,26 +1,41 @@
-const http = require("http");
-const path = require("path");
-const express = require("express");
-const QRCode = require("qrcode");
-const { Server } = require("socket.io");
-const { signToken, verifyToken } = require("./lib/auth");
-const rooms = require("./lib/rooms");
+import "dotenv/config";
+import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
+import express from "express";
+import QRCode from "qrcode";
+import { Server } from "socket.io";
+import { toNodeHandler } from "better-auth/node";
+import { auth, signToken, verifyToken } from "./lib/auth.js";
+import * as rooms from "./lib/rooms.js";
+import * as roomDocuments from "./lib/roomDocuments.js";
+import { createDocumentsRouter } from "./routes/documents.js";
+import * as meetingDoc from "./lib/meetingDocumentPipeline.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: true },
+  cors: { origin: true, credentials: true },
 });
+
+/* ── better-auth handler — MUST be before express.json() ── */
+app.all("/api/auth/*", toNodeHandler(auth));
+
+app.use("/api", createDocumentsRouter(io));
 
 app.use(express.json({ limit: "32kb" }));
 
-/** Allow API calls when the page origin differs (e.g. localhost vs 127.0.0.1) — no cookies used. */
+/** CORS for API calls */
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api")) return next();
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -37,12 +52,12 @@ function joinUrlFromSocket(socket, code) {
   return `${proto}://${host}/?join=${encodeURIComponent(code)}`;
 }
 
-/** GET /api/health — quick check that the Node server (not static-only) is running */
+/** GET /api/health */
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-/** POST /api/login { email, name } -> { token } */
+/** POST /api/login { email, name } -> { token } (legacy JWT login) */
 app.post("/api/login", (req, res) => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().slice(0, 320) : "";
   const name = typeof req.body?.name === "string" ? req.body.name.trim().slice(0, 80) : "";
@@ -85,7 +100,23 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-io.use((socket, next) => {
+/* ── Socket.io auth middleware ── */
+io.use(async (socket, next) => {
+  // Try better-auth cookie session first
+  const cookies = socket.handshake.headers.cookie || "";
+  if (cookies) {
+    try {
+      const session = await auth.api.getSession({
+        headers: new Headers({ cookie: cookies }),
+      });
+      if (session && session.user) {
+        socket.user = { email: session.user.email, name: session.user.name };
+        return next();
+      }
+    } catch (_) { /* fall through to JWT */ }
+  }
+
+  // Fallback: JWT token (for legacy email+name login)
   const raw = socket.handshake.auth?.token || socket.handshake.query?.token;
   const token = typeof raw === "string" ? raw : "";
   if (!token) {
@@ -109,6 +140,7 @@ async function clearRoomSockets(code) {
 
 io.on("connection", (socket) => {
   socket.data.roomCode = null;
+  socket.data.preferredLanguage = "en";
 
   socket.on("room:create", (ack) => {
     if (socket.data.roomCode) {
@@ -162,6 +194,8 @@ io.on("connection", (socket) => {
       peerId: socket.id,
       name: socket.user.name,
     });
+
+    void meetingDoc.emitPayloadForOneSocket(io, socket, codeRaw);
   });
 
   socket.on("signal", (payload) => {
@@ -190,7 +224,17 @@ io.on("connection", (socket) => {
 
   const SIGN_KINDS = new Set(["gesture", "spell", "model"]);
 
-  /** Hand-sign captions (pretrained MediaPipe + fingerpose on client). Rate-limited per socket. */
+  socket.on("doc:setLanguage", (payload) => {
+    const code = socket.data.roomCode;
+    if (!code) return;
+    const raw =
+      typeof payload?.preferredLanguage === "string"
+        ? payload.preferredLanguage.trim().slice(0, 12)
+        : "";
+    socket.data.preferredLanguage = raw || "en";
+    void meetingDoc.emitPayloadForOneSocket(io, socket, code);
+  });
+
   socket.on("sign:caption", (payload) => {
     const code = socket.data.roomCode;
     if (!code) return;
@@ -229,6 +273,7 @@ io.on("connection", (socket) => {
     const code = socket.data.roomCode;
     if (!code) return;
     if (!rooms.endRoomByHost(code, socket.id)) return;
+    roomDocuments.clearRoom(code);
     io.to(code).emit("room:ended", { reason: "host_ended" });
     await clearRoomSockets(code);
   });
@@ -252,6 +297,7 @@ async function leaveSocketRoom(socket) {
     return;
   }
   if (result.ended) {
+    roomDocuments.clearRoom(result.code);
     io.to(result.code).emit("room:ended", {
       reason: result.reason === "host_left" ? "host_left" : "empty",
     });

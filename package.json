@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Video meeting MVP — Express + Socket.io (see Scope.md)",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,12 +14,22 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "better-auth": "^1.5.6",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.3.1",
     "express": "^4.21.2",
     "fingerpose": "^0.1.0",
+    "franc": "^6.2.0",
     "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.12.0",
+    "multer": "^2.1.1",
+    "officeparser": "^6.0.4",
+    "pdf-parse": "^2.4.5",
     "qrcode": "^1.5.4",
     "simple-peer": "^9.11.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "word-extractor": "^1.0.4"
   },
   "devDependencies": {
     "esbuild": "^0.27.4"

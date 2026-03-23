@@ -3,112 +3,406 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ez meeting</title>
+    <title>Ez Meeting — Video, Voice &amp; Chat</title>
+    <meta name="description" content="Ez Meeting: instant video meetings with shared docs, hand-sign captions, and AI-powered document insights." />
     <link rel="stylesheet" href="/styles.css" />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <h1>Ez meeting</h1>
-      <p class="tagline">Video, voice, chat, and optional hand-sign captions (mesh WebRTC)</p>
-    </header>
 
-    <main>
-      <section id="view-login" class="panel hidden">
-        <h2>Sign in</h2>
-        <p class="hint">Email and display name only — no password (see Scope.md).</p>
+    <!-- ============================================================
+         VIEW: LOGIN
+    ============================================================ -->
+    <section id="view-login" class="hidden">
+      <div class="login-bg" aria-hidden="true">
+        <div class="login-bg-orb"></div>
+        <div class="login-bg-orb"></div>
+        <div class="login-bg-orb"></div>
+      </div>
+      <div class="login-card">
+        <div class="login-icon">
+          <i data-lucide="video" style="width:28px;height:28px;stroke:#fff;stroke-width:2;"></i>
+        </div>
+        <h2>Welcome to Ez&nbsp;Meeting</h2>
+        <p class="hint">Enter your details to get started.</p>
+
         <form id="form-login">
           <label>
-            Email
-            <input id="login-email" type="email" required autocomplete="email" maxlength="320" />
+            Email address
+            <input id="login-email" type="email" required autocomplete="email" maxlength="320" placeholder="you@example.com" />
           </label>
           <label>
             Display name
-            <input id="login-name" type="text" required autocomplete="name" maxlength="80" />
+            <input id="login-name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name" />
           </label>
-          <button type="submit">Continue</button>
+          <button type="submit" id="btn-login">
+            Continue
+            <i data-lucide="arrow-right" style="width:16px;height:16px;stroke:#fff;stroke-width:2.5;"></i>
+          </button>
           <p id="login-error" class="error" role="alert"></p>
         </form>
-      </section>
+      </div>
+    </section>
 
-      <section id="view-lobby" class="panel hidden">
-        <h2>Lobby</h2>
-        <p id="lobby-user" class="muted"></p>
-        <div class="actions">
-          <button type="button" id="btn-host">Host a meeting</button>
+    <!-- ============================================================
+         VIEW: LOBBY
+    ============================================================ -->
+    <section id="view-lobby" class="hidden">
+      <header class="topbar">
+        <div class="topbar-brand">
+          <div class="topbar-logo">
+            <i data-lucide="video" style="width:16px;height:16px;stroke:#fff;stroke-width:2.5;"></i>
+          </div>
+          <h1>Ez Meeting</h1>
         </div>
-        <form id="form-join" class="join-row">
-          <label>
-            Join with code
-            <input id="join-code" type="text" maxlength="12" placeholder="e.g. ABC123" autocomplete="off" />
-          </label>
-          <button type="submit">Join</button>
-        </form>
-        <p id="lobby-error" class="error" role="alert"></p>
-        <button type="button" id="btn-logout" class="linkish">Use different email</button>
-      </section>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button type="button" id="btn-logout" class="ghost small">
+            <i data-lucide="log-out" style="width:14px;height:14px;"></i>
+            Sign out
+          </button>
+        </div>
+      </header>
 
-      <section id="view-meeting" class="panel hidden">
-        <div class="meeting-bar">
-          <div class="meeting-meta">
-            <span class="badge" id="meeting-code-label"></span>
-            <button type="button" id="btn-copy-link" class="small">Copy join link</button>
+      <div class="lobby-body">
+        <!-- Hero -->
+        <div class="lobby-hero">
+          <div class="lobby-hero-badge">
+            <i data-lucide="sparkles" style="width:12px;height:12px;"></i>
+            Free &amp; Open-Source MVP
           </div>
-          <div class="meeting-actions">
-            <button type="button" id="btn-leave" class="secondary">Leave</button>
-            <button type="button" id="btn-end" class="danger hidden">End for everyone</button>
+          <h2>Meet without friction.</h2>
+          <p>Instant video rooms with real-time chat, hand-sign captions, and AI-powered document insights — just share a code.</p>
+          <div class="lobby-user-chip">
+            <div class="lobby-user-avatar" id="lobby-user-avatar">?</div>
+            <span id="lobby-user"></span>
           </div>
         </div>
-        <div class="hand-sign-bar">
-          <label class="hand-sign-toggle">
-            <input type="checkbox" id="hand-sign-enable" />
-            Hand-sign captions (camera analyzes your hands — pretrained models, no training)
-          </label>
-          <label class="hand-sign-toggle">
-            <input type="checkbox" id="hand-sign-spell" />
-            Finger-spelling mode (A–Z + open palm = space, hold fist ~⅓s to send line)
-          </label>
-          <label class="hand-sign-toggle">
-            <input type="checkbox" id="sign-tts-enable" />
-            Read others’ sign captions aloud (browser TTS)
-          </label>
-          <div class="spell-actions">
-            <button type="button" id="btn-spell-commit" class="small secondary">Send spelling line</button>
-            <button type="button" id="btn-spell-clear" class="small secondary">Clear spelling</button>
+
+        <!-- Host / Join cards -->
+        <div class="lobby-cards">
+          <!-- Host card -->
+          <div class="lobby-card lobby-card--host">
+            <div class="lobby-card-glow"></div>
+            <span class="lobby-card-icon">
+              <i data-lucide="rocket" style="width:36px;height:36px;stroke:var(--accent-2);stroke-width:1.5;"></i>
+            </span>
+            <h3>Host a Meeting</h3>
+            <p>Create an instant room. Share the code or QR with anyone — they can join in seconds.</p>
+            <button type="button" id="btn-host">
+              <i data-lucide="plus-circle" style="width:16px;height:16px;stroke:#fff;stroke-width:2;"></i>
+              Start Meeting
+            </button>
           </div>
-          <p class="muted small hand-sign-hint">
-            Gesture mode: MediaPipe gestures + fingerpose (victory / thumbs). Spell mode: syauqy ASL letters (geometry-based, noisy).
-            Hold steady ~½s per gesture or letter.
-          </p>
-        </div>
-        <div class="meeting-grid">
-          <div class="video-wrap">
-            <video id="local-video" playsinline autoplay muted></video>
-            <div id="local-sign-subtitle" class="video-subtitle" aria-live="polite"></div>
-            <span class="label">You</span>
-          </div>
-          <div id="remote-videos" class="remote-videos"></div>
-        </div>
-        <div class="sign-panel">
-          <h3>Hand-sign feed</h3>
-          <div id="sign-log" class="sign-log" aria-live="polite"></div>
-        </div>
-        <div class="qr-row">
-          <div>
-            <p class="muted small">Share QR (join URL is invalidated when the meeting ends)</p>
-            <img id="qr-img" alt="Meeting QR code" width="192" height="192" />
-          </div>
-          <aside class="chat">
-            <h3>Chat</h3>
-            <div id="chat-log" class="chat-log" aria-live="polite"></div>
-            <form id="form-chat" class="chat-form">
-              <input id="chat-input" type="text" maxlength="2000" placeholder="Message…" autocomplete="off" />
-              <button type="submit">Send</button>
+
+          <!-- Join card -->
+          <div class="lobby-card lobby-card--join">
+            <div class="lobby-card-glow"></div>
+            <span class="lobby-card-icon">
+              <i data-lucide="link-2" style="width:36px;height:36px;stroke:var(--cyan);stroke-width:1.5;"></i>
+            </span>
+            <h3>Join a Meeting</h3>
+            <p>Enter the room code you received, or paste a join link to hop straight in.</p>
+            <form id="form-join">
+              <div class="join-input-row">
+                <label>
+                  Room code
+                  <input id="join-code" type="text" maxlength="12" placeholder="e.g. ABC123" autocomplete="off" />
+                </label>
+                <button type="submit" style="margin-bottom:1.1rem;">
+                  Join
+                  <i data-lucide="arrow-right" style="width:15px;height:15px;stroke:#fff;stroke-width:2.5;"></i>
+                </button>
+              </div>
             </form>
-          </aside>
+          </div>
         </div>
-        <p id="meeting-status" class="status" role="status"></p>
-      </section>
-    </main>
+
+        <!-- Feature highlights -->
+        <div class="lobby-features">
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="video" style="width:26px;height:26px;stroke:var(--accent-2);stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">HD Video &amp; Audio</div>
+            <div class="lobby-feature-desc">WebRTC mesh, no SFU required</div>
+          </div>
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="mic" style="width:26px;height:26px;stroke:var(--cyan);stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">Voice to Text</div>
+            <div class="lobby-feature-desc">Multi-language speech recognition</div>
+          </div>
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="hand" style="width:26px;height:26px;stroke:var(--green);stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">Hand-Sign Captions</div>
+            <div class="lobby-feature-desc">MediaPipe gesture recognition</div>
+          </div>
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="file-text" style="width:26px;height:26px;stroke:var(--amber);stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">Smart Documents</div>
+            <div class="lobby-feature-desc">AI-powered Q&amp;A like NotebookLM</div>
+          </div>
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="globe" style="width:26px;height:26px;stroke:#a78bfa;stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">Auto-Translation</div>
+            <div class="lobby-feature-desc">Multi-language doc insights</div>
+          </div>
+          <div class="lobby-feature">
+            <span class="lobby-feature-icon">
+              <i data-lucide="shield-check" style="width:26px;height:26px;stroke:#34d399;stroke-width:1.75;"></i>
+            </span>
+            <div class="lobby-feature-title">Secure Access</div>
+            <div class="lobby-feature-desc">Email-based authentication</div>
+          </div>
+        </div>
+
+        <div class="lobby-footer">
+          <p id="lobby-error" class="error" role="alert" style="margin-bottom:0.5rem;"></p>
+          <p class="muted small">Meeting codes are invalidated when the room ends — same as Zoom.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         VIEW: MEETING ROOM
+    ============================================================ -->
+    <section id="view-meeting" class="hidden">
+
+      <!-- Header bar -->
+      <div class="meeting-header">
+        <div class="meeting-header-left">
+          <span class="meeting-brand">Ez Meeting</span>
+          <span class="badge" id="meeting-code-label"></span>
+          <button type="button" id="btn-copy-link" class="small secondary">
+            <i data-lucide="clipboard-copy" style="width:13px;height:13px;stroke:currentColor;stroke-width:2;"></i>
+            Copy invite link
+          </button>
+        </div>
+        <span id="meeting-status" class="meeting-status" role="status"></span>
+      </div>
+
+      <!-- Main content: stage + sidebar -->
+      <div class="meeting-content">
+
+        <!-- Stage (video + hand-sign bar) -->
+        <div class="meeting-stage">
+
+          <!-- Video grid -->
+          <div class="meeting-grid">
+            <div class="video-wrap">
+              <video id="local-video" playsinline autoplay muted></video>
+              <div id="local-sign-subtitle" class="video-subtitle" aria-live="polite"></div>
+              <span class="label">You</span>
+            </div>
+            <div id="remote-videos" class="remote-videos"></div>
+          </div>
+
+          <!-- Hand-sign bar (collapsible) -->
+          <div class="hand-sign-bar" id="hand-sign-bar" style="display:none;">
+            <label class="hand-sign-toggle">
+              <input type="checkbox" id="hand-sign-enable" />
+              Enable hand-sign captions (pretrained models, no training required)
+            </label>
+            <label class="hand-sign-toggle">
+              <input type="checkbox" id="hand-sign-spell" />
+              Finger-spelling mode (A–Z · open palm = space · hold fist ~1/3s to send)
+            </label>
+            <label class="hand-sign-toggle">
+              <input type="checkbox" id="sign-tts-enable" />
+              Read captions aloud (browser TTS)
+            </label>
+            <div class="spell-actions">
+              <button type="button" id="btn-spell-commit" class="small secondary">Send line</button>
+              <button type="button" id="btn-spell-clear"  class="small secondary">Clear</button>
+            </div>
+            <p class="hand-sign-hint">
+              Gesture mode: MediaPipe gestures + fingerpose. Spell mode: ASL letters (geometry-based). Hold steady ~1/2s per gesture.
+            </p>
+            <div class="sign-panel">
+              <h3>Hand-sign feed</h3>
+              <div id="sign-log" class="sign-log" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- QR / share row -->
+          <div class="qr-row">
+            <img id="qr-img" alt="Meeting QR code" width="72" height="72" />
+            <p class="qr-hint muted small">Scan to join · QR invalidates when the meeting ends</p>
+          </div>
+
+        </div><!-- /.meeting-stage -->
+
+        <!-- Sidebar (chat + document + signs) -->
+        <div class="meeting-sidebar sidebar-hidden" id="meeting-sidebar">
+          <div class="sidebar-tabs">
+            <button class="sidebar-tab active" id="sidebar-tab-chat" data-tab="chat">
+              <i data-lucide="message-square" style="width:14px;height:14px;"></i>
+              Chat
+            </button>
+            <button class="sidebar-tab" id="sidebar-tab-doc" data-tab="doc">
+              <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+              Document
+            </button>
+            <button class="sidebar-tab" id="sidebar-tab-handsign" data-tab="handsign">
+              <i data-lucide="hand" style="width:14px;height:14px;"></i>
+              Signs
+            </button>
+          </div>
+
+          <!-- CHAT PANEL -->
+          <div class="sidebar-panel chat-panel active" id="panel-chat">
+            <div id="chat-log" class="chat-log" aria-live="polite"></div>
+
+            <!-- Voice-to-text live transcript -->
+            <div id="stt-live-bar" class="stt-live-bar hidden">
+              <div class="stt-pulse"></div>
+              <span id="stt-live-text" class="stt-live-text">Listening...</span>
+              <select id="stt-lang-select" class="stt-lang-select" title="Speech language">
+                <option value="en-US">English</option>
+                <option value="my-MM">Myanmar</option>
+                <option value="th-TH">Thai</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="zh-CN">Chinese</option>
+                <option value="ko-KR">Korean</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="es-ES">Spanish</option>
+                <option value="pt-BR">Portuguese</option>
+                <option value="ru-RU">Russian</option>
+                <option value="hi-IN">Hindi</option>
+                <option value="ar-SA">Arabic</option>
+                <option value="vi-VN">Vietnamese</option>
+                <option value="id-ID">Indonesian</option>
+                <option value="tr-TR">Turkish</option>
+                <option value="it-IT">Italian</option>
+              </select>
+            </div>
+
+            <form id="form-chat" class="chat-form">
+              <input id="chat-input" type="text" maxlength="2000" placeholder="Message..." autocomplete="off" />
+              <button type="button" id="btn-stt" class="icon-btn stt-btn" title="Voice to text">
+                <i data-lucide="mic" style="width:16px;height:16px;stroke:currentColor;stroke-width:2;"></i>
+              </button>
+              <button type="submit">
+                <i data-lucide="send" style="width:14px;height:14px;stroke:#fff;stroke-width:2;"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- DOCUMENT PANEL (NotebookLM-style) -->
+          <div class="sidebar-panel" id="panel-doc">
+            <div class="doc-panel-wrap doc-panel-wrap--notebook">
+              <!-- Source upload section -->
+              <div class="notebook-source-section">
+                <div class="notebook-source-header">
+                  <i data-lucide="book-open" style="width:16px;height:16px;stroke:var(--accent-2);stroke-width:2;"></i>
+                  <span>Sources</span>
+                </div>
+                <div id="doc-upload-row" class="doc-upload-row doc-upload-row--compact hidden">
+                  <label class="doc-file-label notebook-upload-btn">
+                    <i data-lucide="upload" style="width:14px;height:14px;stroke:currentColor;stroke-width:2;"></i>
+                    Upload source
+                    <input type="file" id="doc-file-input" accept="*/*" />
+                  </label>
+                </div>
+                <p id="doc-status" class="doc-status muted small" role="status"></p>
+              </div>
+
+              <!-- Notebook-style Q&A conversation -->
+              <div class="notebook-chat" id="doc-chat-wrap">
+                <div class="notebook-chat-header">
+                  <i data-lucide="sparkles" style="width:16px;height:16px;stroke:var(--amber);stroke-width:2;"></i>
+                  <span>Ask Gemini</span>
+                  <span class="notebook-badge">AI</span>
+                </div>
+
+                <!-- Conversation history -->
+                <div id="notebook-conversation" class="notebook-conversation" aria-live="polite"></div>
+
+                <!-- Input area -->
+                <form id="doc-chat-form" class="notebook-input-form">
+                  <div class="notebook-input-wrap">
+                    <textarea id="doc-chat-input" rows="1" maxlength="4000" placeholder="Ask anything about this document..." autocomplete="off"></textarea>
+                    <button type="submit" id="doc-chat-send" class="notebook-send-btn" title="Send">
+                      <i data-lucide="arrow-up" style="width:16px;height:16px;stroke:#fff;stroke-width:2.5;"></i>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div><!-- /#panel-doc -->
+
+          <!-- HAND SIGN LOG PANEL -->
+          <div class="sidebar-panel" id="panel-handsign">
+            <div style="padding:0.85rem; display:flex; flex-direction:column; gap:0.65rem; flex:1; overflow:hidden;">
+              <h4 style="font-size:0.9rem;font-weight:700;display:flex;align-items:center;gap:0.45rem;">
+                <i data-lucide="hand" style="width:16px;height:16px;stroke:var(--accent-2);stroke-width:2;"></i>
+                Hand-Sign Feed
+              </h4>
+              <p class="muted small">Sign captions from all participants appear here in real time.</p>
+              <div id="sign-log-sidebar" class="sign-log" style="flex:1;max-height:none;" aria-live="polite"></div>
+            </div>
+          </div>
+
+        </div><!-- /.meeting-sidebar -->
+
+      </div><!-- /.meeting-content -->
+
+      <!-- Control bar -->
+      <div class="meeting-controls">
+        <div class="controls-center">
+          <div class="control-label">
+            <button type="button" id="btn-toggle-mic" class="icon-btn" title="Toggle microphone">
+              <i data-lucide="mic" style="width:20px;height:20px;stroke:currentColor;stroke-width:2;"></i>
+            </button>
+            <span>Mic</span>
+          </div>
+          <div class="control-label">
+            <button type="button" id="btn-toggle-cam" class="icon-btn" title="Toggle camera">
+              <i data-lucide="camera" style="width:20px;height:20px;stroke:currentColor;stroke-width:2;"></i>
+            </button>
+            <span>Camera</span>
+          </div>
+          <div class="control-label">
+            <button type="button" id="btn-toggle-handsign-bar" class="icon-btn" title="Hand-sign captions">
+              <i data-lucide="hand" style="width:20px;height:20px;stroke:currentColor;stroke-width:2;"></i>
+            </button>
+            <span>Signs</span>
+          </div>
+          <div class="control-label">
+            <button type="button" id="btn-toggle-sidebar" class="icon-btn" title="Toggle chat sidebar">
+              <i data-lucide="message-square" style="width:20px;height:20px;stroke:currentColor;stroke-width:2;"></i>
+            </button>
+            <span>Chat</span>
+          </div>
+          <div class="control-label">
+            <button type="button" id="btn-open-doc" class="icon-btn" title="Open shared document">
+              <i data-lucide="file-text" style="width:20px;height:20px;stroke:currentColor;stroke-width:2;"></i>
+            </button>
+            <span>Document</span>
+          </div>
+        </div>
+        <div class="controls-right">
+          <button type="button" id="btn-leave" class="secondary small">
+            <i data-lucide="log-out" style="width:14px;height:14px;stroke:currentColor;stroke-width:2;"></i>
+            Leave
+          </button>
+          <button type="button" id="btn-end" class="danger small hidden">
+            <i data-lucide="x-circle" style="width:14px;height:14px;stroke:currentColor;stroke-width:2;"></i>
+            End for all
+          </button>
+        </div>
+      </div>
+
+    </section><!-- /#view-meeting -->
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/vendor/simplepeer.min.js"></script>
@@ -116,5 +410,9 @@
     <script src="/sign-labels.js"></script>
     <script src="/hand-sign.js"></script>
     <script src="/app.js"></script>
+    <script>
+      // Initialize Lucide icons after DOM is ready
+      if (window.lucide) lucide.createIcons();
+    </script>
   </body>
 </html>
