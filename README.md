@@ -68,7 +68,7 @@ In a meeting, the **host** can upload a file; the server **extracts text**, **de
 
 ### Supported file types
 
-**Structured:** PDF (pdf-parse / `PDFParse`), Word `.doc` ([word-extractor](https://www.npmjs.com/package/word-extractor)), `.docx` (mammoth), legacy `.ppt` (LibreOffice headless or heuristic), `.pptx` / `.xlsx` / OpenDocument / `.rtf` (officeparser). **Markup/code:** `.html` / `.htm` (tag-stripped), `.xml`, `.svg`, many source extensions (`.js`, `.ts`, `.py`, …), `.sql`, `.yaml`, `.toml`, etc. **Anything else:** if the file decodes as **clean UTF-8 text** (enough printable content), it is analyzed the same way; pure binaries fail with a clear error. Scanned PDFs without a text layer may yield “no extractable text”. Optional **`LIBREOFFICE_PATH`**: path to `soffice` if not on `PATH` (see [.env.example](./.env.example)).
+**Structured:** PDF ([pdf-parse](https://www.npmjs.com/package/pdf-parse) v1.x, Node-safe), Word `.doc` ([word-extractor](https://www.npmjs.com/package/word-extractor)), `.docx` (mammoth), legacy `.ppt` (LibreOffice headless or heuristic), `.pptx` / `.xlsx` / OpenDocument / `.rtf` (officeparser). **Markup/code:** `.html` / `.htm` (tag-stripped), `.xml`, `.svg`, many source extensions (`.js`, `.ts`, `.py`, …), `.sql`, `.yaml`, `.toml`, etc. **Anything else:** if the file decodes as **clean UTF-8 text** (enough printable content), it is analyzed the same way; pure binaries fail with a clear error. Scanned PDFs without a text layer may yield “no extractable text”. Optional **`LIBREOFFICE_PATH`**: path to `soffice` if not on `PATH` (see [.env.example](./.env.example)).
 
 ### Configuration
 
