@@ -11,7 +11,7 @@
     "build:handsigns": "esbuild scripts/handsigns-entry.js --bundle --format=iife --global-name=HandSignAlphabetKit --outfile=public/vendor/handsigns-alphabet.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": "18.x"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
