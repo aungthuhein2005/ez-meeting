@@ -2,6 +2,78 @@
   const TOKEN_KEY = "ezmeeting_token";
   const AUTH_TYPE_KEY = "ezmeeting_auth_type"; // "jwt"
 
+const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  let recognition = null;
+  let running = false;
+
+
+  let langEl = '';
+  recognition = new RecognitionCtor();
+    recognition.lang = langEl.value || "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    running = true;
+
+    recognition.onstart = () => {
+      setStatus(`Listening (${recognition.lang})...`);
+      // console.log("[STT] started", { lang: recognition.lang });
+    };
+
+    function setStatus(msg) {
+  meetingStatus(msg);
+}
+
+    recognition.onresult = (event) => {
+      const finals = [];
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = String(result[0]?.transcript || "").trim();
+        if (!transcript) continue;
+        if (result.isFinal) {
+          finals.push(transcript);
+        }
+      }
+      if (!finals.length) return;
+      const sentence = finals.join(" ").replace(/\s+/g, " ").trim();
+      if (!sentence || sentence === lastFinalSentence) return;
+      lastFinalSentence = sentence;
+      console.log("[STT FINAL]", sentence);
+
+// send to others
+if (socket && socket.connected) {
+  socket.emit("stt:message", {
+    text: sentence,
+    lang: recognition.lang || "en-US",
+    at: Date.now()
+  });
+  console.log("[STT] emitted", sentence);
+}
+    };
+
+    recognition.onerror = (event) => {
+      const msg = event?.error || "recognition_error";
+      setStatus(`Error: ${msg}`);
+      console.warn("[STT ERROR]", msg);
+    };
+
+    recognition.onend = () => {
+      if (!running) return;
+      try {
+        recognition.start();
+      } catch (_) {
+        setStatus("Reconnecting...");
+      }
+    };
+
+    try{
+      recognition.start();
+    }catch(e){
+      setStatus("Could not start recognition: " + (e.message || e));
+    }
+
+
   let socket = null;
   let localStream = null;
   const peers = new Map();
@@ -27,6 +99,7 @@
   // Voice-to-text state
   let sttRecognition = null;
   let sttActive = false;
+  let lastFinalSentence = "";
 
   // NotebookLM conversation history (client-side only)
   let notebookConversation = [];
@@ -451,10 +524,13 @@
       if (liveText) liveText.textContent = interim || "Listening...";
 
       // When we get a final result, add to chat input
-      if (final.trim()) {
+      const sentence = final.replace(/\s+/g, " ").trim();
+      if (sentence && sentence !== lastFinalSentence) {
+        lastFinalSentence = sentence;
+        console.log("[STT FINAL]", sentence);
         const input = $("chat-input");
         if (input) {
-          input.value += (input.value ? " " : "") + final.trim();
+          input.value += (input.value ? " " : "") + sentence;
         }
         if (liveText) liveText.textContent = "Listening...";
       }
@@ -601,6 +677,26 @@
       const st = $("doc-status");
       if (st) st.textContent = 'Processing "' + (d.fileName || "") + '"...';
     });
+
+    socket.on("stt:message", (data) => {
+  const { text, lang, at } = data;
+  console.log("[STT MESSAGE]", data);
+
+  const t = new Date(at).toLocaleTimeString();
+
+  // show in chat
+  const chat = $("chat-log");
+  if (chat) {
+    const line = document.createElement("div");
+    line.className = "stt-chat-line";
+    line.textContent = `[Voice] [${t}] ${text}`;
+    chat.appendChild(line);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // OPTIONAL: show subtitle on video
+  // You can reuse your subtitle system
+});
 
     socket.on("doc:ready", (d) => {
       const st = $("doc-status");

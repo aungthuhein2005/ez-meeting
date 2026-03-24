@@ -21,7 +21,7 @@ import * as meetingDoc from "./lib/meetingDocumentPipeline.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3001;
 
 /* Ensure uploads directory exists at startup */
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
@@ -333,6 +333,6 @@ server.on("error", (err) => {
   process.exit(1);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Ez meeting: http://localhost:${PORT}`);
 });
